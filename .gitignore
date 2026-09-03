@@ -1,0 +1,52 @@
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# 编译产物与日志
+*.class
+*.jar
+*.war
+*.log
+log.path_IS_UNDEFINED/
+
+# IDEA 配置文件
+.idea/
+out/
+
+# Claude Code 与系统文件
+.claude/
+.DS_Store
+
+# 本地运行环境/临时配置文件（如适用）
+*.local
+
