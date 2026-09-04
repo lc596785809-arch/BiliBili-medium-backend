@@ -86,6 +86,7 @@
 | 新增/更新分类 | POST | `/api/v1/admin/category/saveCategory` |
 | 删除分类 | POST | `/api/v1/admin/category/delCategory` |
 | 批量更新排序 | POST | `/api/v1/admin/category/updateSort` |
+| 上传分类图片 | POST | `/api/v1/admin/category/uploadImage` |
 
 - 新增时 `categoryId` 为空，更新时 `categoryId` 不为空，统一走 `saveCategory` 接口
 - 删除前校验是否存在子分类，存在则返回 `CODE_606` 阻止删除，防止产生孤儿节点

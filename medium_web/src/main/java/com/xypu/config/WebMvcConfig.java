@@ -2,6 +2,7 @@ package com.xypu.config;
 
 import com.xypu.interceptor.TokenAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -12,6 +13,18 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Resource
     private TokenAuthInterceptor tokenAuthInterceptor;
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                // 客户端前端地址，如实际端口不同请同步修改
+                .allowedOrigins("http://localhost:3001","http://localhost:3002")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                // Authorization 头需在 allowedHeaders 中放行
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
+    }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

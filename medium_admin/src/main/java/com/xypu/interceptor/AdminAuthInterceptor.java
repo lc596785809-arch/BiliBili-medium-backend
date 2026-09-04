@@ -21,6 +21,10 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // OPTIONS 预检请求规范上不携带 Cookie，直接放行，由 CORS 配置负责应答预检响应头
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
         // getSession(false)：不自动创建新 Session，只检查是否已有有效 Session
         HttpSession session = request.getSession(false);
         // Session 不存在（未登录/浏览器关闭/超时）或 Session 中无管理员信息，拦截请求

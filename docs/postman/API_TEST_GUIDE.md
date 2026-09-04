@@ -302,8 +302,7 @@ pm.test("退出成功", () => pm.expect(res.status).to.eql("success"));
   "categoryCode": "anime",
   "categoryName": "动画",
   "icon": "/icon/anime.png",
-  "background": "/bg/anime.jpg",
-  "sort": 1
+  "background": "/bg/anime.jpg"
 }
 ```
 
@@ -313,8 +312,7 @@ pm.test("退出成功", () => pm.expect(res.status).to.eql("success"));
   "categoryId": 1,
   "pCategoryId": 0,
   "categoryCode": "anime",
-  "categoryName": "动漫",
-  "sort": 1
+  "categoryName": "动漫"
 }
 ```
 
@@ -354,7 +352,35 @@ pm.test("删除分类成功", () => pm.expect(res.status).to.eql("success"));
 
 ---
 
-### 4.3 批量更新分类排序（管理端）
+### 4.3 上传分类图片（管理端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `POST` |
+| URL | `{{base_url}}/api/v1/admin/category/uploadImage` |
+| Body 类型 | `form-data` |
+| 字段名 | `file`（类型选 File） |
+
+**Tests 脚本**：
+```javascript
+const res = pm.response.json();
+pm.test("上传成功", () => pm.expect(res.status).to.eql("success"));
+pm.test("返回完整图片URL", () => pm.expect(res.data).to.include("http://"));
+console.log("图片地址：", res.data);
+```
+
+**正常场景**：返回 `code=200`，data 为完整图片 URL（如 `http://localhost:7072/admin/images/category/abc123.jpg`），可直接粘贴到浏览器地址栏预览。
+
+**异常场景**：
+| 场景 | 操作 | 预期响应 |
+|---|---|---|
+| 非图片文件 | 上传 `.txt`、`.pdf` 等 | `code=600` |
+| 未选文件 | file 字段为空 | `code=600` |
+| 未登录 | 不携带 Session Cookie | `code=401` |
+
+---
+
+### 4.4 批量更新分类排序（管理端）
 
 | 项目 | 内容 |
 |---|---|
