@@ -20,7 +20,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/api/v1/client/checkCode",
                         "/api/v1/client/register",
-                        "/api/v1/client/login"
+                        "/api/v1/client/login",
+                        // 分类查询为公开接口，无需 Token
+                        "/api/v1/client/category/loadCategory",
+                        "/api/v1/client/category/loadRootCategory",
+                        "/api/v1/client/category/loadLastLevelCategory"
                 );
     }
 }

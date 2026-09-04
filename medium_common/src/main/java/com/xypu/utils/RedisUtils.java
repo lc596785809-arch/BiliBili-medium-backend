@@ -13,9 +13,14 @@ public class RedisUtils {
     public static final String CHECK_CODE_ADMIN_PREFIX = "check_code:admin:";
     public static final String AUTH_TOKEN_PREFIX = "auth:token:";
 
+    public static final String REDIS_KEY_CATEGORY_LIST = "category:tree";
+    public static final String REDIS_KEY_ROOT_CATEGORY_LIST = "category:root";
+
     public static final long CHECK_CODE_TTL = 300L;
     public static final long TOKEN_TTL = 604800L;
     public static final long TOKEN_REFRESH_THRESHOLD = 86400L;
+    /** 分类缓存 24 小时，写操作时显式删除保证一致性 */
+    public static final long CATEGORY_CACHE_TTL = 86400L;
 
     @Resource
     private RedisTemplate<String, String> redisTemplate;

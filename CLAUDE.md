@@ -69,11 +69,38 @@
 
 **公共基础设施**（均在 `medium_common`）
 - `ResponseVO`：统一响应体，含 status / code / info / data
-- `BusinessException` + `ErrorCodeEnum`：业务异常体系（401/601~605/500）
+- `BusinessException` + `ErrorCodeEnum`：业务异常体系（401/601~606/500）
 - `GlobalExceptionHandler`：全局异常处理，统一返回 JSON
 - `RedisUtils`：Redis 封装，含所有 Key 前缀常量和 TTL 常量
 - `UserContext`：ThreadLocal 用户上下文，请求结束后自动清除
 - `BCryptPasswordEncoder`：密码加密，禁止明文存储与比对
+
+---
+
+### 分类管理模块
+
+**管理端（B端）** — `medium_admin`，端口 7072，context-path `/admin`
+
+| 接口 | 方法 | 路径 |
+|---|---|---|
+| 新增/更新分类 | POST | `/api/v1/admin/category/saveCategory` |
+| 删除分类 | POST | `/api/v1/admin/category/delCategory` |
+| 批量更新排序 | POST | `/api/v1/admin/category/updateSort` |
+
+- 新增时 `categoryId` 为空，更新时 `categoryId` 不为空，统一走 `saveCategory` 接口
+- 删除前校验是否存在子分类，存在则返回 `CODE_606` 阻止删除，防止产生孤儿节点
+- 写操作成功后自动清空 Redis 分类缓存（`category:tree` 和 `category:root`）
+
+**客户端（C端）** — `medium_web`，端口 7071（公开接口，无需 Token）
+
+| 接口 | 方法 | 路径 |
+|---|---|---|
+| 加载全量分类树 | GET | `/api/v1/client/category/loadCategory` |
+| 加载顶级分类 | GET | `/api/v1/client/category/loadRootCategory` |
+| 加载叶子分类 | GET | `/api/v1/client/category/loadLastLevelCategory` |
+
+- 缓存策略：Cache-Aside，优先读 Redis（`category:tree` / `category:root`），未命中时从 DB 重建后写入（TTL 24h）
+- 叶子分类：从全量树中递归提取无子节点的终端分类，用于视频发布时的分类强制选择
 
 ---
 

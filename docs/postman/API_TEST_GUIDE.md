@@ -280,7 +280,176 @@ pm.test("退出成功", () => pm.expect(res.status).to.eql("success"));
 
 ---
 
-## 四、通用注意事项
+## 四、分类管理接口
+
+> 管理端（saveCategory / delCategory）需先完成管理员登录，Session Cookie 自动携带。
+> 客户端查询接口（loadCategory / loadRootCategory / loadLastLevelCategory）为公开接口，无需 Token。
+
+---
+
+### 4.1 新增/更新分类（管理端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `POST` |
+| URL | `{{base_url}}/api/v1/admin/category/saveCategory` |
+| Body 类型 | `raw → JSON` |
+
+**新增顶级分类请求体示例**：
+```json
+{
+  "pCategoryId": 0,
+  "categoryCode": "anime",
+  "categoryName": "动画",
+  "icon": "/icon/anime.png",
+  "background": "/bg/anime.jpg",
+  "sort": 1
+}
+```
+
+**更新已有分类（携带 categoryId）**：
+```json
+{
+  "categoryId": 1,
+  "pCategoryId": 0,
+  "categoryCode": "anime",
+  "categoryName": "动漫",
+  "sort": 1
+}
+```
+
+**Tests 脚本**：
+```javascript
+const res = pm.response.json();
+pm.test("保存分类成功", () => pm.expect(res.status).to.eql("success"));
+```
+
+**异常场景**：
+| 场景 | 操作 | 预期响应 |
+|---|---|---|
+| pCategoryId 缺失 | 请求体中去掉该字段 | `code=400（Spring Validation）` |
+| 未登录 | 不携带 Session Cookie | `code=401` |
+
+---
+
+### 4.2 删除分类（管理端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `POST` |
+| URL | `{{base_url}}/api/v1/admin/category/delCategory?categoryId=1` |
+| 请求参数 | `categoryId`（Query Param） |
+
+**Tests 脚本**：
+```javascript
+const res = pm.response.json();
+pm.test("删除分类成功", () => pm.expect(res.status).to.eql("success"));
+```
+
+**异常场景**：
+| 场景 | 操作 | 预期响应 |
+|---|---|---|
+| 存在子分类 | 删除仍有子分类的父级 | `code=606` |
+| 未登录 | 不携带 Session Cookie | `code=401` |
+
+---
+
+### 4.3 批量更新分类排序（管理端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `POST` |
+| URL | `{{base_url}}/api/v1/admin/category/updateSort` |
+| Body 类型 | `raw → JSON`（数组） |
+
+**请求体示例**（前端拖拽完成后将当前层级的完整顺序提交）：
+```json
+[
+  {"categoryId": 3, "sort": 1},
+  {"categoryId": 1, "sort": 2},
+  {"categoryId": 2, "sort": 3}
+]
+```
+
+**Tests 脚本**：
+```javascript
+const res = pm.response.json();
+pm.test("排序更新成功", () => pm.expect(res.status).to.eql("success"));
+```
+
+**正常场景**：返回 `code=200`，Redis 缓存自动清空，下次查询分类树将按新顺序返回。
+
+**异常场景**：
+| 场景 | 操作 | 预期响应 |
+|---|---|---|
+| 数组元素缺少 categoryId | 去掉某元素的 categoryId 字段 | `code=400` |
+| 未登录 | 不携带 Session Cookie | `code=401` |
+
+---
+
+### 4.4 加载全量分类树（客户端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `GET` |
+| URL | `{{base_url}}/api/v1/client/category/loadCategory` |
+| 请求参数 | 无 |
+
+**Tests 脚本**：
+```javascript
+const res = pm.response.json();
+pm.test("返回分类树成功", () => pm.expect(res.status).to.eql("success"));
+pm.test("data 为数组", () => pm.expect(res.data).to.be.an("array"));
+```
+
+**正常场景**：返回树形结构数组，每个节点包含 `children` 字段（叶子节点为空数组）。
+首次调用从 DB 查询并写入 Redis；后续调用直接命中缓存。
+
+---
+
+### 4.4 加载顶级分类（客户端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `GET` |
+| URL | `{{base_url}}/api/v1/client/category/loadRootCategory` |
+| 请求参数 | 无 |
+
+**Tests 脚本**：
+```javascript
+const res = pm.response.json();
+pm.test("返回顶级分类成功", () => pm.expect(res.status).to.eql("success"));
+pm.test("所有分类均为顶级节点", () => {
+    res.data.forEach(c => pm.expect(c.pCategoryId).to.eql(0));
+});
+```
+
+---
+
+### 4.5 加载叶子分类（客户端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `GET` |
+| URL | `{{base_url}}/api/v1/client/category/loadLastLevelCategory` |
+| 请求参数 | 无 |
+
+**Tests 脚本**：
+```javascript
+const res = pm.response.json();
+pm.test("返回叶子分类成功", () => pm.expect(res.status).to.eql("success"));
+pm.test("所有节点无子分类", () => {
+    res.data.forEach(c => {
+        pm.expect(!c.children || c.children.length === 0).to.be.true;
+    });
+});
+```
+
+**正常场景**：返回平铺的叶子节点列表（无 children 或 children 为空），用于视频发布时的分类选择。
+
+---
+
+## 五、通用注意事项
 
 1. **POST 接口统一使用 JSON Body**：Body 类型选 `raw → JSON`，Postman 会自动添加 `Content-Type: application/json`，不要使用 `form-data` 或 `x-www-form-urlencoded`。
 
