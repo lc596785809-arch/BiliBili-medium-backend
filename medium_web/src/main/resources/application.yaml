@@ -45,6 +45,9 @@ mybatis:
 
 project:
   folder: e:/work/BiliBili_backend/
+
+ffmpeg:
+  path: ffmpeg   # 确保 FFmpeg 已加入系统 PATH；Windows 完整路径示例：D:/ffmpeg/bin/ffmpeg.exe
 log:
   root:
     level: debug

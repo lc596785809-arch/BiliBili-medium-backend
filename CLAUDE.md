@@ -105,6 +105,45 @@
 
 ---
 
+### 视频模块
+
+**客户端（C端）** — `medium_web`，端口 7071
+
+| 接口 | 方法 | 路径 |
+|---|---|---|
+| 视频预上传 | GET | `/file/preUploadVideo` |
+| 分片上传 | POST | `/file/uploadVideo` |
+| 取消上传 | GET | `/file/delUploadVideo` |
+| 上传视频封面 | POST | `/file/uploadImage` |
+| 读取图片资源 | GET | `/file/getResource` |
+| 读取 m3u8（HLS 入口） | GET | `/file/videoResource/{fileId}` |
+| 读取 ts 分片 | GET | `/file/videoResource/{fileId}/{tsName}` |
+| 提交视频信息 | POST | `/video/saveVideoInfo` |
+
+- 分片上传流程：preUploadVideo → 逐片 uploadVideo → 最后一片触发异步 FFmpeg 转码（@Async）
+- 转码输出：`${project.folder}video/{videoId}/index.m3u8` + ts 分片
+- 播放可见规则：`auditStatus=2 AND isDeleted=0 AND isPublic=1`，否则 403
+- 播放计数：m3u8 访问时 Redis `video:play:{videoId}` 原子自增
+- 图片资源：浏览器长缓存（Cache-Control: max-age=604800）
+- saveVideoInfo：提交后 auditStatus 从 0（草稿）变为 1（待审核）
+
+**管理端（B端）** — `medium_admin`，端口 7072，context-path `/admin`
+
+| 接口 | 方法 | 路径 |
+|---|---|---|
+| 分页查询视频列表 | POST | `/videoInfo/loadVideoList` |
+| 视频审核 | POST | `/videoInfo/auditVideo` |
+| 设置推荐 | POST | `/videoInfo/recommendVideo` |
+| 逻辑删除 | POST | `/videoInfo/deleteVideo` |
+| 视频总数统计 | GET | `/videoInfo/getVideoCount` |
+| 下载完整 MP4 | GET | `/videoInfo/downloadVideo` |
+| 切换公开/私密 | POST | `/videoInfo/setVideoPublic` |
+
+- 下载：FFmpeg 将 m3u8 重封装为临时 MP4，流式下载后自动删除临时文件
+- 逻辑删除：isDeleted=1，前台不展示，DB 记录保留
+
+---
+
 ## 待开发 TODO
 
 ### 用户认证与权限管理模块（待补全）

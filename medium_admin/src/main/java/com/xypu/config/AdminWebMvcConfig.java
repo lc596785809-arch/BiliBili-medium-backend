@@ -48,7 +48,9 @@ public class AdminWebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/api/v1/admin/checkCode",
                         "/api/v1/admin/register",
-                        "/api/v1/admin/login"
+                        "/api/v1/admin/login",
+                        // 视频播放测试页（静态资源，无需登录）
+                        "/player.html"
                 );
     }
 }

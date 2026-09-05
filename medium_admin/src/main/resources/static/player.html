@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>HLS 视频播放测试</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #1a1a1a; color: #eee; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; min-height: 100vh; }
+    h1 { font-size: 20px; margin-bottom: 24px; color: #fff; }
+    .controls { display: flex; gap: 10px; width: 100%; max-width: 720px; margin-bottom: 16px; }
+    input { flex: 1; padding: 10px 14px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #eee; font-size: 14px; outline: none; }
+    input:focus { border-color: #fb7299; }
+    button { padding: 10px 20px; background: #fb7299; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; white-space: nowrap; }
+    button:hover { background: #e05a80; }
+    video { width: 100%; max-width: 720px; background: #000; border-radius: 8px; }
+    .url-tip { margin-top: 12px; font-size: 12px; color: #888; word-break: break-all; max-width: 720px; width: 100%; }
+    .error { color: #f66; margin-top: 10px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>HLS 视频播放测试</h1>
+  <div class="controls">
+    <input id="fileId" type="text" placeholder="输入 fileId（来自 video_info_file 表）" />
+    <button onclick="play()">播放</button>
+  </div>
+  <video id="video" controls></video>
+  <div class="url-tip" id="urlTip"></div>
+  <div class="error" id="error"></div>
+
+  <script>
+    const API_BASE = 'http://localhost:7071/api/v1/client/file/videoResource';
+    let hlsInstance = null;
+
+    function play() {
+      const fileId = document.getElementById('fileId').value.trim();
+      const errorEl = document.getElementById('error');
+      const urlTip = document.getElementById('urlTip');
+      errorEl.textContent = '';
+
+      if (!fileId) {
+        errorEl.textContent = '请输入 fileId';
+        return;
+      }
+
+      const m3u8Url = `${API_BASE}/${fileId}`;
+      urlTip.textContent = '播放地址：' + m3u8Url;
+
+      const video = document.getElementById('video');
+
+      // 销毁旧实例
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+
+      if (Hls.isSupported()) {
+        hlsInstance = new Hls();
+        hlsInstance.loadSource(m3u8Url);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+        hlsInstance.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) errorEl.textContent = '播放失败：' + data.type + ' - ' + data.details;
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari 原生支持 HLS
+        video.src = m3u8Url;
+        video.play();
+      } else {
+        errorEl.textContent = '当前浏览器不支持 HLS 播放';
+      }
+    }
+
+    // 支持回车触发播放
+    document.getElementById('fileId').addEventListener('keydown', e => {
+      if (e.key === 'Enter') play();
+    });
+  </script>
+</body>
+</html>
