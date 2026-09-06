@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xypu.mapper.VideoInfoMapper">
+
+    <select id="selectVideoPage" resultType="com.xypu.entity.vo.VideoInfoVO">
+        SELECT
+            vi.video_id,
+            vi.video_cover,
+            vi.video_name,
+            vi.user_id,
+            vi.create_time,
+            vi.last_update_time,
+            vi.p_category_id,
+            vi.category_id,
+            vi.tags,
+            vi.introduction,
+            vi.interaction,
+            vi.duration,
+            vi.play_count,
+            vi.recommend_type,
+            vi.recommend_time,
+            vi.is_public,
+            vi.is_vip,
+            vi.audit_status,
+            vi.is_deleted,
+            u.nick_name,
+            vf.file_id
+        FROM video_info vi
+        LEFT JOIN user_info u ON vi.user_id COLLATE utf8mb4_unicode_ci = u.user_id
+        LEFT JOIN video_info_file vf ON vi.video_id = vf.video_id AND vf.file_index = 0
+        WHERE vi.is_deleted = 0
+        <if test="dto.videoName != null and dto.videoName != ''">
+            AND vi.video_name LIKE CONCAT('%', #{dto.videoName}, '%')
+        </if>
+        <if test="dto.categoryId != null">
+            AND vi.category_id = #{dto.categoryId}
+        </if>
+        <if test="dto.auditStatus != null">
+            AND vi.audit_status = #{dto.auditStatus}
+        </if>
+        <if test="dto.recommendType != null">
+            AND vi.recommend_type = #{dto.recommendType}
+        </if>
+        <if test="dto.isVip != null">
+            AND vi.is_vip = #{dto.isVip}
+        </if>
+        ORDER BY vi.create_time DESC
+    </select>
+
+
+    <select id="selectVideoDetail" resultType="com.xypu.entity.vo.VideoInfoVO">
+        SELECT
+            vi.video_id,
+            vi.video_cover,
+            vi.video_name,
+            vi.user_id,
+            vi.create_time,
+            vi.last_update_time,
+            vi.p_category_id,
+            vi.category_id,
+            vi.tags,
+            vi.introduction,
+            vi.interaction,
+            vi.duration,
+            vi.play_count,
+            vi.recommend_type,
+            vi.recommend_time,
+            vi.is_public,
+            vi.is_vip,
+            vi.audit_status,
+            vi.is_deleted,
+            u.nick_name,
+            vf.file_id
+        FROM video_info vi
+        LEFT JOIN user_info u ON vi.user_id COLLATE utf8mb4_unicode_ci = u.user_id
+        LEFT JOIN video_info_file vf ON vi.video_id = vf.video_id AND vf.file_index = 0
+        WHERE vi.video_id = #{videoId}
+    </select>
+
+</mapper>

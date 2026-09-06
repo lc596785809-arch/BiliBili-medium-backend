@@ -12,6 +12,7 @@ import com.xypu.entity.dto.VideoQueryDTO;
 import com.xypu.entity.po.VideoInfo;
 import com.xypu.entity.vo.PreUploadVO;
 import com.xypu.entity.vo.UploadTaskVO;
+import com.xypu.entity.vo.VideoInfoVO;
 import com.xypu.exception.BusinessException;
 import com.xypu.exception.ErrorCodeEnum;
 import com.xypu.mapper.VideoInfoMapper;
@@ -95,15 +96,14 @@ public class VideoInfoServiceImpl extends ServiceImpl<VideoInfoMapper, VideoInfo
     }
 
     @Override
-    public IPage<VideoInfo> loadVideoList(VideoQueryDTO dto) {
-        Page<VideoInfo> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        LambdaQueryWrapper<VideoInfo> wrapper = new LambdaQueryWrapper<VideoInfo>()
-                .eq(VideoInfo::getIsDeleted, 0)
-                .like(StringUtils.isNotBlank(dto.getVideoName()), VideoInfo::getVideoName, dto.getVideoName())
-                .eq(dto.getAuditStatus() != null, VideoInfo::getAuditStatus, dto.getAuditStatus())
-                .eq(dto.getRecommendType() != null, VideoInfo::getRecommendType, dto.getRecommendType())
-                .orderByDesc(VideoInfo::getCreateTime);
-        return page(page, wrapper);
+    public IPage<VideoInfoVO> loadVideoList(VideoQueryDTO dto) {
+        Page<VideoInfoVO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        return baseMapper.selectVideoPage(page, dto);
+    }
+
+    @Override
+    public VideoInfoVO getVideoDetail(String videoId) {
+        return baseMapper.selectVideoDetail(videoId);
     }
 
     @Override
@@ -144,6 +144,20 @@ public class VideoInfoServiceImpl extends ServiceImpl<VideoInfoMapper, VideoInfo
         VideoInfo update = new VideoInfo();
         update.setVideoId(videoId);
         update.setIsPublic(isPublic);
+        update.setLastUpdateTime(new Date());
+        updateById(update);
+    }
+
+    @Override
+    public void setVideoVip(String videoId, Integer isVip) {
+        // 仅审核通过的视频才能修改 VIP 状态
+        VideoInfo videoInfo = getById(videoId);
+        if (videoInfo == null || videoInfo.getAuditStatus() != 2) {
+            throw new BusinessException(ErrorCodeEnum.CODE_600);
+        }
+        VideoInfo update = new VideoInfo();
+        update.setVideoId(videoId);
+        update.setIsVip(isVip);
         update.setLastUpdateTime(new Date());
         updateById(update);
     }

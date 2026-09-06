@@ -131,16 +131,23 @@
 
 | 接口 | 方法 | 路径 |
 |---|---|---|
-| 分页查询视频列表 | POST | `/videoInfo/loadVideoList` |
-| 视频审核 | POST | `/videoInfo/auditVideo` |
-| 设置推荐 | POST | `/videoInfo/recommendVideo` |
-| 逻辑删除 | POST | `/videoInfo/deleteVideo` |
-| 视频总数统计 | GET | `/videoInfo/getVideoCount` |
-| 下载完整 MP4 | GET | `/videoInfo/downloadVideo` |
-| 切换公开/私密 | POST | `/videoInfo/setVideoPublic` |
+| 分页查询视频列表 | POST | `/api/v1/admin/videoInfo/loadVideoList` |
+| 视频审核 | POST | `/api/v1/admin/videoInfo/auditVideo` |
+| 设置推荐 | POST | `/api/v1/admin/videoInfo/recommendVideo` |
+| 逻辑删除 | POST | `/api/v1/admin/videoInfo/deleteVideo` |
+| 视频总数统计 | GET | `/api/v1/admin/videoInfo/getVideoCount` |
+| 下载完整 MP4 | GET | `/api/v1/admin/videoInfo/downloadVideo` |
+| 切换公开/私密 | POST | `/api/v1/admin/videoInfo/setVideoPublic` |
+| 查询视频详情 | GET | `/api/v1/admin/videoInfo/getVideoDetail` |
+| 切换 VIP 状态 | POST | `/api/v1/admin/videoInfo/setVideoVip` |
+| 管理端播放 m3u8 | GET | `/api/v1/admin/videoInfo/videoResource/{fileId}` |
+| 管理端获取 ts 分片 | GET | `/api/v1/admin/videoInfo/videoResource/{fileId}/{tsName}` |
 
 - 下载：FFmpeg 将 m3u8 重封装为临时 MP4，流式下载后自动删除临时文件
 - 逻辑删除：isDeleted=1，前台不展示，DB 记录保留
+- `loadVideoList` 返回 VideoInfoVO（含 nickName、fileId），支持 categoryId/isVip 筛选，默认每页 20 条
+- `getVideoDetail`：关联 user_info + video_info_file，供详情弹窗及 HLS 播放使用
+- `setVideoVip`：仅 auditStatus=2 的视频可操作
 
 ---
 

@@ -5,6 +5,7 @@ import com.xypu.entity.dto.VideoAuditDTO;
 import com.xypu.entity.dto.VideoQueryDTO;
 import com.xypu.entity.po.VideoInfo;
 import com.xypu.entity.po.VideoInfoFile;
+import com.xypu.entity.vo.VideoInfoVO;
 import com.xypu.exception.BusinessException;
 import com.xypu.exception.ErrorCodeEnum;
 import com.xypu.response.ResponseVO;
@@ -21,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 @RestController
 @RequestMapping("/api/v1/admin/videoInfo")
@@ -41,12 +43,26 @@ public class VideoController {
     private VideoInfoFileService videoInfoFileService;
 
     /**
-     * 分页查询视频稿件列表
-     * 支持视频名称模糊检索、审核状态筛选、推荐状态筛选
+     * 分页查询视频列表
+     * 支持名称模糊、末级分类、审核状态、推荐状态、VIP 类型组合筛选
+     * 返回字段包含上传者昵称（nickName）和 HLS 播放凭证（fileId）
      */
     @PostMapping("/loadVideoList")
-    public ResponseVO<IPage<VideoInfo>> loadVideoList(@RequestBody VideoQueryDTO dto) {
+    public ResponseVO<IPage<VideoInfoVO>> loadVideoList(@RequestBody VideoQueryDTO dto) {
         return ResponseVO.ok(videoInfoService.loadVideoList(dto));
+    }
+
+    /**
+     * 查询视频详情（含昵称、fileId）
+     * 用于管理端详情弹窗展示视频信息及 HLS 播放
+     */
+    @GetMapping("/getVideoDetail")
+    public ResponseVO<VideoInfoVO> getVideoDetail(@RequestParam String videoId) {
+        VideoInfoVO detail = videoInfoService.getVideoDetail(videoId);
+        if (detail == null) {
+            throw new BusinessException(ErrorCodeEnum.CODE_600);
+        }
+        return ResponseVO.ok(detail);
     }
 
     /**
@@ -166,5 +182,70 @@ public class VideoController {
                                            @RequestParam Integer isPublic) {
         videoInfoService.setVideoPublic(videoId, isPublic);
         return ResponseVO.ok();
+    }
+
+    /**
+     * 切换视频 VIP 状态（isVip 0↔1）
+     * 仅审核通过（auditStatus=2）的视频允许操作
+     */
+    @PostMapping("/setVideoVip")
+    public ResponseVO<Void> setVideoVip(@RequestParam String videoId,
+                                        @RequestParam Integer isVip) {
+        videoInfoService.setVideoVip(videoId, isVip);
+        return ResponseVO.ok();
+    }
+
+    /**
+     * 管理端读取 m3u8 索引文件，无需审核/公开状态校验，管理员可预览任意视频
+     * m3u8 中的相对 ts 路径改写为含 fileId 的相对路径，保证 hls.js 能正确拼接请求地址
+     */
+    @GetMapping("/videoResource/{fileId}")
+    public void getM3u8(@PathVariable String fileId, HttpServletResponse response) throws IOException {
+        VideoInfoFile fileInfo = videoInfoFileService.getByFileId(fileId);
+        if (fileInfo == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
+        File m3u8File = new File(projectFolder + fileInfo.getFilePath() + "index.m3u8");
+        if (!m3u8File.exists()) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
+        String m3u8Content = new String(Files.readAllBytes(m3u8File.toPath()));
+        m3u8Content = m3u8Content.replaceAll("(\\d+\\.ts)", fileId + "/$1");
+
+        response.setContentType("application/vnd.apple.mpegurl");
+        response.setHeader("Cache-Control", "no-cache");
+        response.getWriter().write(m3u8Content);
+    }
+
+    /**
+     * 管理端读取 ts 视频分片，供 hls.js 逐段加载
+     */
+    @GetMapping("/videoResource/{fileId}/{tsName}")
+    public void getTsSegment(@PathVariable String fileId,
+                             @PathVariable String tsName,
+                             HttpServletResponse response) throws IOException {
+        VideoInfoFile fileInfo = videoInfoFileService.getByFileId(fileId);
+        if (fileInfo == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        // ts 文件名安全校验：只允许数字+.ts
+        if (!tsName.matches("\\d+\\.ts")) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+
+        File tsFile = new File(projectFolder + fileInfo.getFilePath() + tsName);
+        if (!tsFile.exists()) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
+        response.setContentType("video/mp2t");
+        Files.copy(tsFile.toPath(), response.getOutputStream());
     }
 }

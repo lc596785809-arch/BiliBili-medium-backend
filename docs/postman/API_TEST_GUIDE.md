@@ -702,10 +702,38 @@ pm.test("Content-Type 正确", () => {
 ```json
 {
   "pageNo": 1,
-  "pageSize": 10,
+  "pageSize": 20,
   "videoName": "",
-  "auditStatus": 1,
-  "recommendType": null
+  "categoryId": null,
+  "auditStatus": null,
+  "recommendType": null,
+  "isVip": null
+}
+```
+
+**响应 data 结构**：
+```json
+{
+  "records": [
+    {
+      "videoId": "abc123",
+      "videoCover": "http://...",
+      "videoName": "视频标题",
+      "userId": "用户ID",
+      "nickName": "上传者昵称",
+      "introduction": "简介",
+      "playCount": 100,
+      "lastUpdateTime": "2026-01-01T00:00:00",
+      "auditStatus": 2,
+      "isVip": 0,
+      "recommendType": 0,
+      "fileId": "HLS播放凭证"
+    }
+  ],
+  "total": 50,
+  "size": 20,
+  "current": 1,
+  "pages": 3
 }
 ```
 
@@ -717,6 +745,13 @@ pm.test("返回分页结构", () => {
     pm.expect(res.data).to.have.property("records");
     pm.expect(res.data).to.have.property("total");
 });
+if (res.data.records.length > 0) {
+    const first = res.data.records[0];
+    pm.test("记录含 nickName", () => pm.expect(first).to.have.property("nickName"));
+    pm.test("记录含 fileId", () => pm.expect(first).to.have.property("fileId"));
+    pm.environment.set("adminVideoId", first.videoId);
+    pm.environment.set("adminFileId", first.fileId);
+}
 ```
 
 ---
@@ -813,6 +848,69 @@ pm.test("data 为数字", () => pm.expect(res.data).to.be.a("number"));
 | 方法 | `POST` |
 | URL | `{{base_url}}/api/v1/admin/videoInfo/setVideoPublic?videoId=abc1234567&isPublic=0` |
 | 参数 | `videoId`、`isPublic`（1=公开 0=私密） |
+
+---
+
+### 5.16 查询视频详情（管理端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `GET` |
+| URL | `{{base_url}}/api/v1/admin/videoInfo/getVideoDetail?videoId={{videoId}}` |
+
+**响应 data**：VideoInfoVO，含所有视频字段 + `nickName`（上传者昵称）+ `fileId`（HLS 播放凭证）
+
+**异常场景**：
+| 场景 | 预期响应 |
+|---|---|
+| videoId 不存在 | `code=600` |
+
+---
+
+### 5.17 切换 VIP 状态（管理端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `POST` |
+| URL | `{{base_url}}/api/v1/admin/videoInfo/setVideoVip?videoId={{videoId}}&isVip=1` |
+| 参数 | `videoId`、`isVip`（1=VIP 0=免费） |
+
+**异常场景**：
+| 场景 | 预期响应 |
+|---|---|
+| 视频未审核通过（auditStatus≠2） | `code=600` |
+
+---
+
+### 5.18 管理端播放 m3u8（管理端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `GET` |
+| URL | `{{admin_base_url}}/api/v1/admin/videoInfo/videoResource/{{adminFileId}}` |
+| 认证 | Session Cookie（管理员已登录即可，浏览器自动携带） |
+
+**说明**：返回 m3u8 索引文件内容，无审核/公开状态限制，管理员可预览任意视频（含草稿、待审核）。m3u8 中 ts 路径已改写为含 `fileId` 的相对路径，hls.js 可直接使用。
+
+**正常场景**：响应 `Content-Type: application/vnd.apple.mpegurl`，内容为标准 m3u8 文本。
+
+**异常场景**：
+| 场景 | 预期响应 |
+|---|---|
+| fileId 不存在 | `HTTP 404` |
+| m3u8 文件尚未生成（转码中） | `HTTP 404` |
+
+---
+
+### 5.19 管理端读取 ts 分片（管理端）
+
+| 项目 | 内容 |
+|---|---|
+| 方法 | `GET` |
+| URL | `{{admin_base_url}}/api/v1/admin/videoInfo/videoResource/{{adminFileId}}/0.ts` |
+| 认证 | Session Cookie |
+
+**说明**：返回单个 ts 视频分片流，由 hls.js 自动调用，通常不需要手动测试。ts 文件名格式必须为 `数字.ts`，非此格式返回 400。
 
 ---
 
